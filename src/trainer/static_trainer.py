@@ -92,7 +92,11 @@ class StaticTrainer(BaseTrainer):
             latent_queries=self.latent_tokens_coord,
             gno_radius=gno_radius,
             scales=scales,
-            build_train=self.setup_config.train
+            build_train=self.setup_config.train,
+            use_dynamic_radius=self.dataset_config.use_dynamic_radius,
+            knn_k=self.dataset_config.knn_k,
+            radius_alpha_encoder=self.dataset_config.radius_alpha_encoder,
+            radius_alpha_decoder=self.dataset_config.radius_alpha_decoder
         )
         
         # Create data loaders with graphs

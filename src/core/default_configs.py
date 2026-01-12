@@ -71,6 +71,11 @@ class DatasetConfig:
     sample_rate: float = 0.1                                    # Sample rate for point clouds
     use_sparse: bool = False                                    # Use sparse representations (PDEGym datasets)
     rand_dataset: bool = False                                  # Randomize dataset sequence
+    use_dynamic_radius: bool = False                            # Use dynamic radius per token
+    knn_k: int = 5                                              # Number of neighbors for dynamic radius
+    radius_alpha_encoder: float = 1.0                           # Encoder radius scaling factor
+    radius_alpha_decoder: float = 2.0                           # Decoder radius scaling factor
+    base_radius: float = 0.033                                  # Base radius if dynamic radius is disabled
     
     # Time-dependent dataset parameters
     max_time_diff: int = 14                                     # Maximum time difference for pairs
