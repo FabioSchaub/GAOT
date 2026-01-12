@@ -11,7 +11,7 @@
 
     "model": {
         "name": "goat",
-        "latent_tokens_size": [64, 64],
+        "num_latent_tokens": 128,
         "args": {
             "magno": {
                 "coord_dim": 2,
@@ -21,7 +21,7 @@
                 "lifting_channels": 64
             },
             "transformer": {
-                "patch_size": 2,
+                "patch_size": 1,
                 "hidden_size": 256
             }
         }
