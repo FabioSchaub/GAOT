@@ -38,9 +38,9 @@
         "num_workers": 4,
         "shuffle": true,
         "use_dynamic_radius": true,
-        "knn_k": 5,
-        "radius_alpha_encoder": 1.0,
-        "radius_alpha_decoder": 2.0,
+        "knn_k": 10,
+        "radius_alpha_encoder": 0.3,
+        "radius_alpha_decoder": 0.6,
         "base_radius": 0.033
     },
 
