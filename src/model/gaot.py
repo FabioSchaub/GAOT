@@ -170,17 +170,16 @@ class GAOT(nn.Module):
             # rndata shape: [batch, num_tokens, C]
             # Use actual token coordinates for positional encoding
             assert latent_tokens_coord is not None, "latent_tokens_coord required when patch_size=1"
+            pos_emb = self._compute_absolute_embeddings(
+                latent_tokens_coord.to(rndata.device), 
+                C
+            )
             if not hasattr(self, "_pe_debug_done"):
                 self._pe_debug_done = True
                 coords = latent_tokens_coord.to(rndata.device)
                 print("[PE DEBUG] coords shape/device:", tuple(coords.shape), coords.device)
                 print("[PE DEBUG] coords min/max:", coords.min().item(), coords.max().item())
                 print("[PE DEBUG] rndata mean/std:", rndata.mean().item(), rndata.std().item())
-            pos_emb = self._compute_absolute_embeddings(
-                latent_tokens_coord.to(rndata.device), 
-                C
-            )
-            if getattr(self, "_pe_debug_done", False):
                 print("[PE DEBUG] pos_emb mean/std:", pos_emb.mean().item(), pos_emb.std().item())
             pos_emb = pos_emb.unsqueeze(0).expand(batch_size, -1, -1)
             
