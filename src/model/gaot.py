@@ -88,9 +88,8 @@ class GAOT(nn.Module):
         Generate positional embeddings for the patches or tokens.
         """
         if self.patch_size == 1:
-            # Random sampling: use sequential token IDs
-            positions = torch.arange(self.num_latent_tokens, dtype=torch.float32).unsqueeze(1)
-            return positions
+            # Random tokens: actual coordinates are supplied at runtime
+            return None
         
         # Grid-based patching (original code)
         P = self.patch_size
@@ -143,7 +142,8 @@ class GAOT(nn.Module):
         return encoded
 
     def process(self, rndata: Optional[torch.Tensor] = None,
-                condition: Optional[float] = None
+                condition: Optional[float] = None,
+                latent_tokens_coord: Optional[torch.Tensor] = None
                 ) -> torch.Tensor:
         """
         Process regional node data through Vision Transformer.
@@ -168,9 +168,10 @@ class GAOT(nn.Module):
         # Random sampling: no patching needed
         if P == 1:
             # rndata shape: [batch, num_tokens, C]
-            # Apply transformer directly
+            # Use actual token coordinates for positional encoding
+            assert latent_tokens_coord is not None, "latent_tokens_coord required when patch_size=1"
             pos_emb = self._compute_absolute_embeddings(
-                self.positions.to(rndata.device), 
+                latent_tokens_coord.to(rndata.device), 
                 C
             )
             pos_emb = pos_emb.unsqueeze(0).expand(batch_size, -1, -1)
@@ -308,7 +309,8 @@ class GAOT(nn.Module):
         # Process: Apply Vision Transformer on regional nodes
         rndata = self.process(
             rndata=rndata, 
-            condition=condition)
+            condition=condition,
+            latent_tokens_coord=latent_tokens_coord)
 
         # Decode: Map regional nodes back to query nodes
         if query_coord is None:
