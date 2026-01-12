@@ -121,20 +121,44 @@ class GraphBuilder:
             
             # Build encoder graphs (physical -> latent)
             encoder_nbrs_sample = []
-            for scale in scales:
-                scaled_radius = gno_radius * scale
-                with torch.no_grad():
-                    nbrs = self.nb_search(x_coord_scaled, latent_queries, scaled_radius)
-                encoder_nbrs_sample.append(nbrs)
+            if use_dynamic_radius:
+                # Use per-token dynamic radius for encoder
+                for scale in scales:
+                    nbrs_per_token = []
+                    for token_idx in range(len(latent_queries)):
+                        token_radius = radius_encoder[token_idx].item() * scale
+                        with torch.no_grad():
+                            nbrs = self.nb_search(x_coord_scaled, latent_queries[token_idx:token_idx+1], token_radius)
+                        nbrs_per_token.append(nbrs)
+                    encoder_nbrs_sample.append(nbrs_per_token)
+            else:
+                # Use fixed radius for all tokens
+                for scale in scales:
+                    scaled_radius = gno_radius * scale
+                    with torch.no_grad():
+                        nbrs = self.nb_search(x_coord_scaled, latent_queries, scaled_radius)
+                    encoder_nbrs_sample.append(nbrs)
             encoder_graphs.append(encoder_nbrs_sample)
             
             # Build decoder graphs (latent -> physical)
             decoder_nbrs_sample = []
-            for scale in scales:
-                scaled_radius = gno_radius * scale
-                with torch.no_grad():
-                    nbrs = self.nb_search(latent_queries, x_coord_scaled, scaled_radius)
-                decoder_nbrs_sample.append(nbrs)
+            if use_dynamic_radius:
+                # Use per-token dynamic radius for decoder
+                for scale in scales:
+                    nbrs_per_token = []
+                    for token_idx in range(len(latent_queries)):
+                        token_radius = radius_decoder[token_idx].item() * scale
+                        with torch.no_grad():
+                            nbrs = self.nb_search(latent_queries[token_idx:token_idx+1], x_coord_scaled, token_radius)
+                        nbrs_per_token.append(nbrs)
+                    decoder_nbrs_sample.append(nbrs_per_token)
+            else:
+                # Use fixed radius for all tokens
+                for scale in scales:
+                    scaled_radius = gno_radius * scale
+                    with torch.no_grad():
+                        nbrs = self.nb_search(latent_queries, x_coord_scaled, scaled_radius)
+                    decoder_nbrs_sample.append(nbrs)
             decoder_graphs.append(decoder_nbrs_sample)
             
             if (i + 1) % 100 == 0 or i == len(x_data) - 1:
