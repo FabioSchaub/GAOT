@@ -36,20 +36,11 @@ class GAOT(nn.Module):
         self.node_latent_size = config.args.magno.lifting_channels 
         self.patch_size = config.args.transformer.patch_size
         
-        # Get latent token dimensions
-        latent_tokens_size = config.latent_tokens_size
-        if coord_dim == 2:
-            if len(latent_tokens_size) != 2:
-                raise ValueError(f"For 2D, latent_tokens_size must have 2 dimensions, got {len(latent_tokens_size)}")
-            self.H = latent_tokens_size[0]
-            self.W = latent_tokens_size[1]
-            self.D = None
-        else:  # 3D
-            if len(latent_tokens_size) != 3:
-                raise ValueError(f"For 3D, latent_tokens_size must have 3 dimensions, got {len(latent_tokens_size)}")
-            self.H = latent_tokens_size[0]
-            self.W = latent_tokens_size[1] 
-            self.D = latent_tokens_size[2]
+        # Random sampling: no grid structure
+        self.num_latent_tokens = config.num_latent_tokens
+        self.H = None
+        self.W = None
+        self.D = None
 
         # Initialize encoder, processor, and decoder
         self.encoder = self.init_encoder(input_size, self.node_latent_size, config.args.magno)
@@ -65,7 +56,10 @@ class GAOT(nn.Module):
     
     def init_processor(self, node_latent_size, config):
         # Initialize the Vision Transformer processor
-        if self.coord_dim == 2:
+        if self.patch_size == 1:
+            # No patching for random tokens
+            patch_volume = 1
+        elif self.coord_dim == 2:
             patch_volume = self.patch_size * self.patch_size
         else:  # 3D
             patch_volume = self.patch_size * self.patch_size * self.patch_size
@@ -91,8 +85,14 @@ class GAOT(nn.Module):
 
     def _get_patch_positions(self):
         """
-        Generate positional embeddings for the patches.
+        Generate positional embeddings for the patches or tokens.
         """
+        if self.patch_size == 1:
+            # Random sampling: use sequential token IDs
+            positions = torch.arange(self.num_latent_tokens, dtype=torch.float32).unsqueeze(1)
+            return positions
+        
+        # Grid-based patching (original code)
         P = self.patch_size
         
         if self.coord_dim == 2:
@@ -165,6 +165,22 @@ class GAOT(nn.Module):
         C = rndata.shape[2]
         P = self.patch_size
         
+        # Random sampling: no patching needed
+        if P == 1:
+            # rndata shape: [batch, num_tokens, C]
+            # Apply transformer directly
+            pos_emb = self._compute_absolute_embeddings(
+                self.positions.to(rndata.device), 
+                C
+            )
+            pos_emb = pos_emb.unsqueeze(0).expand(batch_size, -1, -1)
+            
+            rndata_with_pos = rndata + pos_emb
+            processed = self.processor(rndata_with_pos, condition=condition)
+            
+            return processed
+        
+        # Grid-based patching (original code)
         if self.coord_dim == 2:
             H, W = self.H, self.W
             

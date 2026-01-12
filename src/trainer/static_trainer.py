@@ -53,7 +53,7 @@ class StaticTrainer(BaseTrainer):
         print(f"Detected coordinate mode: {self.coord_mode}")
         
         latent_queries = self.data_processor.generate_latent_queries(
-            self.model_config.latent_tokens_size
+            self.model_config.num_latent_tokens
         )
         self.latent_tokens_coord = latent_queries
         

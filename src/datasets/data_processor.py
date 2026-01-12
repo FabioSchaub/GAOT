@@ -277,37 +277,44 @@ class DataProcessor:
             "test": {"c": c_test, "u": u_test, "x": x_test},
         }
     
-    def generate_latent_queries(self, token_size: Tuple[int, ...]) -> torch.Tensor:
-        """Generate latent query points on a regular grid."""
-        phy_domain = self.metadata.domain_x
+    def generate_latent_queries(self, num_tokens: int) -> torch.Tensor:
+        """
+        Generate random latent query points uniformly sampled from physical domain.
         
-        if len(token_size) == 2:
-            # 2D case
+        Args:
+            num_tokens: Number of random tokens to sample (e.g., 128)
+        
+        Returns:
+            torch.Tensor: Latent query coordinates of shape [num_tokens, coord_dim]
+        """
+        phy_domain = self.metadata.domain_x
+        coord_dim = len(phy_domain[0])
+        
+        print(f"Generating {num_tokens} random tokens in {coord_dim}D domain")
+        
+        if coord_dim == 2:
+            # 2D random sampling
             x_min, y_min = phy_domain[0]
             x_max, y_max = phy_domain[1]
             
-            meshgrid = torch.meshgrid(
-                torch.linspace(x_min, x_max, token_size[0], dtype=self.dtype),
-                torch.linspace(y_min, y_max, token_size[1], dtype=self.dtype),
-                indexing='ij'
-            )
-            latent_queries = torch.stack(meshgrid, dim=-1).reshape(-1, 2)
-        
-        elif len(token_size) == 3:
-            # 3D case
+            # Sample N random points uniformly from domain D
+            latent_queries = torch.rand(num_tokens, 2, dtype=self.dtype)
+            latent_queries[:, 0] = latent_queries[:, 0] * (x_max - x_min) + x_min
+            latent_queries[:, 1] = latent_queries[:, 1] * (y_max - y_min) + y_min
+            
+        elif coord_dim == 3:
+            # 3D random sampling
             x_min, y_min, z_min = phy_domain[0]
             x_max, y_max, z_max = phy_domain[1]
             
-            meshgrid = torch.meshgrid(
-                torch.linspace(x_min, x_max, token_size[0], dtype=self.dtype),
-                torch.linspace(y_min, y_max, token_size[1], dtype=self.dtype),
-                torch.linspace(z_min, z_max, token_size[2], dtype=self.dtype),
-                indexing='ij'
-            )
-            latent_queries = torch.stack(meshgrid, dim=-1).reshape(-1, 3)
-        
+            # Sample N random points uniformly from domain D
+            latent_queries = torch.rand(num_tokens, 3, dtype=self.dtype)
+            latent_queries[:, 0] = latent_queries[:, 0] * (x_max - x_min) + x_min
+            latent_queries[:, 1] = latent_queries[:, 1] * (y_max - y_min) + y_min
+            latent_queries[:, 2] = latent_queries[:, 2] * (z_max - z_min) + z_min
+            
         else:
-            raise ValueError(f"Unsupported token_size dimensions: {len(token_size)}")
+            raise ValueError(f"Unsupported coordinate dimension: {coord_dim}")
         
         # Initialize coordinate scaler if not already done
         if self.coord_scaler is None:
@@ -316,7 +323,10 @@ class DataProcessor:
                 mode=self.dataset_config.coord_scaling
             )
         
+        # Scale coordinates to target range [-1, 1]
         latent_queries = self.coord_scaler(latent_queries)
+        
+        print(f"Generated latent queries with shape: {latent_queries.shape}")
         
         return latent_queries
     

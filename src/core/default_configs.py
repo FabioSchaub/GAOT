@@ -50,7 +50,7 @@ class ModelConfig:
     """Model configuration."""
     name: str = "gaot"                                             # Model name: "gaot"
     use_conditional_norm: bool = False                             # Time-conditional normalization
-    latent_tokens_size: Tuple[int, int] = (64, 64)                 # Latent token dimensions (H,W) or (H,W,D)
+    num_latent_tokens: int = 128                                   # Number of random latent tokens
     args: ModelArgsConfig = field(default_factory=ModelArgsConfig) # Model component configurations
 
 
