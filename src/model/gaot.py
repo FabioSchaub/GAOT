@@ -69,6 +69,15 @@ class GAOT(nn.Module):
     
         self.positional_embedding_name = config.positional_embedding
         self.positions = self._get_patch_positions()
+        
+        # MLP for learnable positional encoding
+        self.pos_mlp = nn.Sequential(
+            nn.Linear(self.coord_dim, 128),
+            nn.GELU(),
+            nn.Linear(128, 128),
+            nn.GELU(),
+            nn.Linear(128, node_latent_size * patch_volume)
+        )
 
         return Transformer(
             input_size=node_latent_size * patch_volume,
@@ -91,7 +100,7 @@ class GAOT(nn.Module):
             # Random tokens: actual coordinates are supplied at runtime
             return None
         
-        # Grid-based patching (original code)
+        # Grid-based patching 
         P = self.patch_size
         
         if self.coord_dim == 2:
@@ -117,15 +126,10 @@ class GAOT(nn.Module):
 
     def _compute_absolute_embeddings(self, positions, embed_dim):
         """
-        Compute absolute embeddings for the given positions.
+        Compute absolute embeddings for the given positions using MLP.
         """
-        num_pos_dims = positions.size(1)
-        dim_touse = embed_dim // (2 * num_pos_dims)
-        freq_seq = torch.arange(dim_touse, dtype=torch.float32, device=positions.device)
-        inv_freq = 1.0 / (10000 ** (freq_seq / dim_touse))
-        sinusoid_inp = positions[:, :, None] * inv_freq[None, None, :]
-        pos_emb = torch.cat([torch.sin(sinusoid_inp), torch.cos(sinusoid_inp)], dim=-1)
-        pos_emb = pos_emb.view(positions.size(0), -1)
+        # MLP-based learnable positional encoding
+        pos_emb = self.pos_mlp(positions)
         return pos_emb
 
     def encode(self, x_coord: torch.Tensor, 
@@ -177,10 +181,10 @@ class GAOT(nn.Module):
             if not hasattr(self, "_pe_debug_done"):
                 self._pe_debug_done = True
                 coords = latent_tokens_coord.to(rndata.device)
-                print("[PE DEBUG] coords shape/device:", tuple(coords.shape), coords.device)
-                print("[PE DEBUG] coords min/max:", coords.min().item(), coords.max().item())
-                print("[PE DEBUG] rndata mean/std:", rndata.mean().item(), rndata.std().item())
-                print("[PE DEBUG] pos_emb mean/std:", pos_emb.mean().item(), pos_emb.std().item())
+                # print("[PE DEBUG] coords shape/device:", tuple(coords.shape), coords.device)
+                # print("[PE DEBUG] coords min/max:", coords.min().item(), coords.max().item())
+                # print("[PE DEBUG] rndata mean/std:", rndata.mean().item(), rndata.std().item())
+                # print("[PE DEBUG] pos_emb mean/std:", pos_emb.mean().item(), pos_emb.std().item())
             pos_emb = pos_emb.unsqueeze(0).expand(batch_size, -1, -1)
             
             rndata_with_pos = rndata + pos_emb
